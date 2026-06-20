@@ -1,39 +1,29 @@
 @echo off
-REM Diagnostic — verifies Spectre-mitigated libs are installed where the
-REM WDK build chain expects them. Run inside the VM.
+REM Find Visual Studio install + verify Spectre libs.
 
-echo === Visual Studio editions present ===
-dir "C:\Program Files\Microsoft Visual Studio\2022" /b 2>nul
-dir "C:\Program Files (x86)\Microsoft Visual Studio\2022" /b 2>nul
-
-echo.
-echo === MSVC toolchain version(s) under Community ===
-dir "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC" /b 2>nul
-
-echo.
-echo === Spectre lib check (Community / x64) ===
-for /d %%I in ("C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\*") do (
-    echo --- %%~nxI ---
-    if exist "%%I\lib\spectre\x64\libcmt.lib" (
-        echo   [OK] libcmt.lib FOUND
-    ) else (
-        echo   [MISSING] libcmt.lib NOT FOUND
-    )
-    if exist "%%I\lib\spectre\x64\libcpmt.lib" (
-        echo   [OK] libcpmt.lib FOUND
-    ) else (
-        echo   [MISSING] libcpmt.lib NOT FOUND
-    )
-    if exist "%%I\atlmfc\lib\spectre\x64\atls.lib" (
-        echo   [OK] atls.lib FOUND
-    ) else (
-        echo   [MISSING] atls.lib NOT FOUND
+echo === Searching for cl.exe (C compiler) across all drives ===
+for %%D in (C D E F G) do (
+    if exist %%D:\ (
+        echo Searching %%D:\
+        dir /s /b "%%D:\cl.exe" 2>nul | findstr /i "MSVC" 2>nul
     )
 )
 
 echo.
-echo === WDK kernel mode lib path ===
-dir "C:\Program Files (x86)\Windows Kits\10\Lib" /b 2>nul
+echo === Searching for VS install directory ===
+for %%D in (C D E F G) do (
+    if exist %%D:\ (
+        dir /s /b "%%D:\Microsoft Visual Studio" 2>nul | findstr /i "devenv.exe$"
+    )
+)
+
+echo.
+echo === Looking for spectre folders anywhere under VS ===
+for %%D in (C D E F G) do (
+    if exist %%D:\ (
+        dir /s /b "%%D:\spectre" 2>nul | findstr /i "lib\\spectre\\x64$"
+    )
+)
 
 echo.
 echo === DONE ===
