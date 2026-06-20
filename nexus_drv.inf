@@ -1,0 +1,53 @@
+;
+; nexus_drv.inf — minimal driver info file required by the build.
+; We never actually install via this INF (we use kdmapper); it just satisfies
+; the WDK build pipeline so the .sys file gets produced.
+;
+
+[Version]
+Signature   = "$WINDOWS NT$"
+Class       = System
+ClassGuid   = {4d36e97d-e325-11ce-bfc1-08002be10318}
+Provider    = %ManufacturerName%
+DriverVer   = 01/01/2026,1.0.0.0
+CatalogFile = nexus_drv.cat
+PnpLockDown = 1
+
+[DestinationDirs]
+DefaultDestDir = 12
+
+[SourceDisksNames]
+1 = %DiskName%,,,""
+
+[SourceDisksFiles]
+nexus_drv.sys = 1,,
+
+[Manufacturer]
+%ManufacturerName% = Standard,NT$ARCH$
+
+[Standard.NT$ARCH$]
+%DeviceDesc% = nexus_drv_Device, Root\nexus_drv
+
+[nexus_drv_Device.NT]
+CopyFiles = Drivers_Dir
+
+[Drivers_Dir]
+nexus_drv.sys
+
+[nexus_drv_Device.NT.Services]
+AddService = nexus_drv, %SPSVCINST_ASSOCSERVICE%, nexus_drv_Service_Inst
+
+[nexus_drv_Service_Inst]
+DisplayName    = %ServiceName%
+ServiceType    = 1
+StartType      = 3
+ErrorControl   = 1
+ServiceBinary  = %12%\nexus_drv.sys
+LoadOrderGroup = Base
+
+[Strings]
+SPSVCINST_ASSOCSERVICE = 0x00000002
+ManufacturerName       = "Nexus"
+DiskName               = "Nexus Installation Disk"
+DeviceDesc             = "Nexus Kernel Driver"
+ServiceName            = "nexus_drv"
