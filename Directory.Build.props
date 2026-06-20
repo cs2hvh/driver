@@ -1,13 +1,19 @@
 <Project>
   <!-- Auto-imported by MSBuild before any project file evaluates. -->
   <PropertyGroup>
-    <!-- VS 18 Insiders ships multiple MSVC toolchains. Only 14.44.35207 has
-         Spectre-mitigated libs installed in this environment, so pin to it. -->
+    <!-- Pin to the MSVC toolchain that actually has Spectre libs installed. -->
     <VCToolsVersion>14.44.35207</VCToolsVersion>
 
-    <!-- Belt-and-suspenders: also force-disable Spectre in case the override
-         is dropped by the WDK build chain. -->
+    <!-- Belt-and-suspenders Spectre disable. -->
     <SpectreMitigation>false</SpectreMitigation>
     <EnableSpectreMitigation>false</EnableSpectreMitigation>
+
+    <!-- VS 2026 + WDK extension built for VS 2022 = WDK paths aren't wired
+         in automatically. Hardcode the SDK root + version so the include /
+         lib lookups in Directory.Build.targets resolve correctly. -->
+    <WindowsSdkDir>C:\Program Files (x86)\Windows Kits\10\</WindowsSdkDir>
+    <WindowsTargetPlatformVersion>10.0.26100.0</WindowsTargetPlatformVersion>
+    <KMDF_VERSION_MAJOR>1</KMDF_VERSION_MAJOR>
+    <KMDF_VERSION_MINOR>33</KMDF_VERSION_MINOR>
   </PropertyGroup>
 </Project>
