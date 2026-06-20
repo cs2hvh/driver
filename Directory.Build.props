@@ -1,7 +1,12 @@
 <Project>
-  <!-- Force-disable Spectre mitigation globally for this directory. -->
   <!-- Auto-imported by MSBuild before any project file evaluates. -->
   <PropertyGroup>
+    <!-- VS 18 Insiders ships multiple MSVC toolchains. Only 14.44.35207 has
+         Spectre-mitigated libs installed in this environment, so pin to it. -->
+    <VCToolsVersion>14.44.35207</VCToolsVersion>
+
+    <!-- Belt-and-suspenders: also force-disable Spectre in case the override
+         is dropped by the WDK build chain. -->
     <SpectreMitigation>false</SpectreMitigation>
     <EnableSpectreMitigation>false</EnableSpectreMitigation>
   </PropertyGroup>
