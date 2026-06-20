@@ -50,4 +50,13 @@
     <Inf Include="nexus_drv.inf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <!-- Force Spectre off AFTER WDK targets load so they can't override us. -->
+  <PropertyGroup>
+    <SpectreMitigation>false</SpectreMitigation>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <SpectreMitigation>false</SpectreMitigation>
+    </ClCompile>
+  </ItemDefinitionGroup>
 </Project>
