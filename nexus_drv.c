@@ -144,13 +144,17 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,
     DbgPrint("[nexus_drv] PsSetLoadImageNotifyRoutine:       0x%08X\n", s2);
     RestoreCi();
 
-    if (!NT_SUCCESS(s1) || !NT_SUCCESS(s2)) {
-        // Best-effort cleanup of whichever succeeded.
-        if (NT_SUCCESS(s1)) PsSetCreateProcessNotifyRoutineEx(ProcessNotify, TRUE);
-        if (NT_SUCCESS(s2)) PsRemoveLoadImageNotifyRoutine(ImageLoadNotify);
-        return NT_SUCCESS(s1) ? s2 : s1;
+    // Keep whichever callback succeeded. PsSetLoadImageNotifyRoutine alone
+     // is enough to detect cs2.exe spawn (it fires when each image loads in
+     // every process, including the cs2.exe image itself).
+    if (!NT_SUCCESS(s1) && !NT_SUCCESS(s2)) {
+        DbgPrint("[nexus_drv] BOTH registrations failed — aborting\n");
+        return s1;  // both failed; report the first error
     }
 
-    DbgPrint("[nexus_drv] Ready — waiting for %ls\n", g_targetExe);
+    DbgPrint("[nexus_drv] Ready — waiting for %ls (procNotify=%s, imageNotify=%s)\n",
+             g_targetExe,
+             NT_SUCCESS(s1) ? "ON" : "OFF",
+             NT_SUCCESS(s2) ? "ON" : "OFF");
     return STATUS_SUCCESS;
 }
