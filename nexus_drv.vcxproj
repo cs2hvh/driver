@@ -26,6 +26,12 @@
     <UseDebugLibraries Condition="'$(Configuration)'=='Release'">false</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
     <SpectreMitigation>false</SpectreMitigation>
+    <!-- Disable driver signing — kdmapper loads unsigned drivers via the
+         BYOVD vector, so signing here adds no value and just fails when
+         signtool /fd isn't preconfigured. -->
+    <SignMode>Off</SignMode>
+    <DriverSign-DDR_Sign>false</DriverSign-DDR_Sign>
+    <EnableInf2cat>false</EnableInf2cat>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <PropertyGroup>

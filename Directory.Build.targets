@@ -1,9 +1,18 @@
 <Project>
-  <!-- Override the Spectre lib check with a no-op so WDK driver targets
-       don't fail on missing 14.51/14.52 Spectre libs. -->
+  <!-- Override the Spectre lib check with a no-op. -->
   <Target Name="_CheckForSpectreMitigationCompilationLibraries">
-    <Message Importance="high"
-             Text="[nexus] Spectre lib check bypassed (override target)" />
+    <Message Importance="high" Text="[nexus] Spectre lib check bypassed" />
+  </Target>
+
+  <!-- Override signing-related targets — kdmapper loads unsigned drivers. -->
+  <Target Name="SignTask">
+    <Message Importance="high" Text="[nexus] SignTask skipped" />
+  </Target>
+  <Target Name="StampInf">
+    <Message Importance="high" Text="[nexus] StampInf skipped" />
+  </Target>
+  <Target Name="Inf2Cat">
+    <Message Importance="high" Text="[nexus] Inf2Cat skipped" />
   </Target>
 
   <!-- WDK include + library paths are not being added by the toolset on
