@@ -1,0 +1,12 @@
+<Project>
+  <!-- Forces SpectreMitigation=false right before the WDK check runs,
+       and overrides the property in case driver targets reset it. -->
+  <Target Name="NexusDisableSpectreCheck"
+          BeforeTargets="_CheckForSpectreMitigationCompilationLibraries;
+                         _PrepareForBuild">
+    <PropertyGroup>
+      <SpectreMitigation>false</SpectreMitigation>
+    </PropertyGroup>
+    <Message Importance="high" Text="[nexus] Forced SpectreMitigation=false" />
+  </Target>
+</Project>

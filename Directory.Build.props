@@ -1,0 +1,8 @@
+<Project>
+  <!-- Force-disable Spectre mitigation globally for this directory. -->
+  <!-- Auto-imported by MSBuild before any project file evaluates. -->
+  <PropertyGroup>
+    <SpectreMitigation>false</SpectreMitigation>
+    <EnableSpectreMitigation>false</EnableSpectreMitigation>
+  </PropertyGroup>
+</Project>
