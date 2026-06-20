@@ -69,16 +69,34 @@ static const WCHAR* g_targetExe = L"cs2.exe";
 
 // ---- Callbacks ----------------------------------------------------------
 
-// Extracts the base filename from a "\Device\HarddiskVolume...\path\file.exe"
-// style UNICODE_STRING. Returns pointer into the caller-owned buffer.
-static const WCHAR* BaseName(PCUNICODE_STRING full) {
-    if (!full || !full->Buffer || full->Length == 0) return NULL;
-    USHORT len = full->Length / sizeof(WCHAR);
-    const WCHAR* base = full->Buffer;
-    for (USHORT i = 0; i < len; i++) {
-        if (full->Buffer[i] == L'\\') base = &full->Buffer[i + 1];
+// SAFER comparison: UNICODE_STRING buffers are NOT guaranteed null-
+// terminated. Using _wcsicmp on raw buffer ptrs can read past the end and
+// page-fault → BSOD. This routine does length-checked, case-insensitive
+// ASCII compare of the basename portion only.
+static BOOLEAN BaseNameEqualsI(PCUNICODE_STRING full, const WCHAR* target) {
+    if (!full || !full->Buffer || full->Length == 0 || !target) return FALSE;
+    const USHORT totalChars = full->Length / sizeof(WCHAR);
+
+    // Find start of basename (after last backslash, or 0 if no backslash).
+    USHORT baseStart = 0;
+    for (USHORT i = 0; i < totalChars; i++) {
+        if (full->Buffer[i] == L'\\') baseStart = (USHORT)(i + 1);
     }
-    return base;
+    USHORT baseLen = (USHORT)(totalChars - baseStart);
+
+    // Compute target length (target IS null-terminated since it's a literal).
+    USHORT tLen = 0;
+    while (target[tLen]) tLen++;
+    if (baseLen != tLen) return FALSE;
+
+    for (USHORT i = 0; i < baseLen; i++) {
+        WCHAR a = full->Buffer[baseStart + i];
+        WCHAR b = target[i];
+        if (a >= L'A' && a <= L'Z') a = (WCHAR)(a + 32);
+        if (b >= L'A' && b <= L'Z') b = (WCHAR)(b + 32);
+        if (a != b) return FALSE;
+    }
+    return TRUE;
 }
 
 VOID ProcessNotify(_In_ PEPROCESS Process,
@@ -86,13 +104,10 @@ VOID ProcessNotify(_In_ PEPROCESS Process,
                    _In_opt_ PPS_CREATE_NOTIFY_INFO CreateInfo)
 {
     UNREFERENCED_PARAMETER(Process);
-    if (!CreateInfo) return;                  // exit notification — ignore
+    if (!CreateInfo) return;
     if (!CreateInfo->ImageFileName) return;
 
-    PCWSTR base = BaseName(CreateInfo->ImageFileName);
-    if (!base) return;
-
-    if (_wcsicmp(base, g_targetExe) == 0) {
+    if (BaseNameEqualsI(CreateInfo->ImageFileName, g_targetExe)) {
         DbgPrint("[nexus_drv] TARGET process created: pid=%lu image=%wZ\n",
                  (ULONG)(ULONG_PTR)ProcessId, CreateInfo->ImageFileName);
     }
@@ -102,21 +117,18 @@ VOID ImageLoadNotify(_In_opt_ PUNICODE_STRING FullImageName,
                      _In_ HANDLE ProcessId,
                      _In_ PIMAGE_INFO ImageInfo)
 {
-    UNREFERENCED_PARAMETER(ImageInfo);
+    if (!ImageInfo) return;
     if (!FullImageName) return;
 
-    PCWSTR base = BaseName(FullImageName);
-    if (!base) return;
-
-    // Only log a small set of "milestone" DLLs so we don't spam DbgPrint
-    // every load. kernel32.dll is the canonical "process ready for APC
-    // injection" marker we'll use later.
-    if (_wcsicmp(base, L"kernel32.dll") == 0 ||
-        _wcsicmp(base, L"ntdll.dll")    == 0 ||
-        _wcsicmp(base, L"cs2.exe")      == 0)
+    // Only log a small set of "milestone" loads. wZ in DbgPrint takes a
+    // PUNICODE_STRING directly and respects its Length, so we can print the
+    // full path safely without touching the buffer ourselves.
+    if (BaseNameEqualsI(FullImageName, L"kernel32.dll") ||
+        BaseNameEqualsI(FullImageName, L"ntdll.dll")    ||
+        BaseNameEqualsI(FullImageName, L"cs2.exe"))
     {
-        DbgPrint("[nexus_drv] image-load: %ls in pid=%lu base=%p size=0x%X\n",
-                 base, (ULONG)(ULONG_PTR)ProcessId,
+        DbgPrint("[nexus_drv] image-load: %wZ in pid=%lu base=%p size=0x%X\n",
+                 FullImageName, (ULONG)(ULONG_PTR)ProcessId,
                  ImageInfo->ImageBase, (ULONG)ImageInfo->ImageSize);
     }
 }
