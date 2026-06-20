@@ -14,9 +14,7 @@
 // be run as Administrator; turn on "Capture Kernel" in Capture menu).
 
 #include <ntddk.h>
-
-// Make wide-string CRT functions available in kernel mode.
-NTSYSAPI int __cdecl _wcsicmp(_In_z_ const wchar_t* s1, _In_z_ const wchar_t* s2);
+#include <wchar.h>
 
 // ---- Config (will be settable via IOCTL in a later iteration) -----------
 static const WCHAR* g_targetExe = L"cs2.exe";
@@ -24,11 +22,11 @@ static const WCHAR* g_targetExe = L"cs2.exe";
 // ---- Callbacks ----------------------------------------------------------
 
 // Extracts the base filename from a "\Device\HarddiskVolume...\path\file.exe"
-// style UNICODE_STRING.
-static PCWSTR BaseName(PUNICODE_STRING full) {
+// style UNICODE_STRING. Returns pointer into the caller-owned buffer.
+static const WCHAR* BaseName(PCUNICODE_STRING full) {
     if (!full || !full->Buffer || full->Length == 0) return NULL;
     USHORT len = full->Length / sizeof(WCHAR);
-    PCWSTR base = full->Buffer;
+    const WCHAR* base = full->Buffer;
     for (USHORT i = 0; i < len; i++) {
         if (full->Buffer[i] == L'\\') base = &full->Buffer[i + 1];
     }

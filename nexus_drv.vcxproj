@@ -46,8 +46,11 @@
   <ItemGroup>
     <ClCompile Include="nexus_drv.c" />
   </ItemGroup>
+  <!-- INF removed — kdmapper-loaded drivers don't go through Windows' INF
+       install pipeline, so the Inf2Cat / InfVerif steps add no value and
+       just fail on systems missing the x86 InfVerif.dll. -->
   <ItemGroup>
-    <Inf Include="nexus_drv.inf" />
+    <None Include="nexus_drv.inf" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <!-- Force Spectre off AFTER WDK targets load so they can't override us. -->
