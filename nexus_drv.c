@@ -13,7 +13,6 @@
 // View DbgPrint output on the host with Sysinternals DebugView.exe (must
 // be run as Administrator; turn on "Capture Kernel" in Capture menu).
 
-#include <ntifs.h>
 #include <ntddk.h>
 
 // Make wide-string CRT functions available in kernel mode.
