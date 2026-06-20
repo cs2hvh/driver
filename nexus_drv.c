@@ -16,6 +16,54 @@
 #include <ntddk.h>
 #include <wchar.h>
 
+// ---- Code Integrity bypass --------------------------------------------
+// Kdmapper-loaded drivers fail the "is this driver signed?" check that
+// PsSetCreateProcessNotifyRoutineEx (and friends) perform. They return
+// STATUS_ACCESS_DENIED (0xC0000022). To work around this, locate the
+// kernel-internal g_CiOptions global and zero it out for the duration of
+// our protected calls, then restore.
+//
+// g_CiOptions lives inside CI.dll (mapped into the kernel). We resolve it
+// by scanning the bytes after CiInitialize.
+
+static PVOID FindCiOptions(void) {
+    UNICODE_STRING name = RTL_CONSTANT_STRING(L"CiInitialize");
+    PVOID ciInit = MmGetSystemRoutineAddress(&name);
+    if (!ciInit) return NULL;
+
+    // Scan up to 0x100 bytes for the lea referencing g_CiOptions.
+    // Pattern: 4C 8D 35 ?? ?? ?? ??  (lea r14, g_CiOptions)
+    PUCHAR p = (PUCHAR)ciInit;
+    for (ULONG i = 0; i < 0x100; ++i) {
+        if (p[i] == 0x4C && p[i+1] == 0x8D && p[i+2] == 0x35) {
+            LONG rel = *(LONG*)(p + i + 3);
+            return (PVOID)(p + i + 7 + rel);
+        }
+    }
+    return NULL;
+}
+
+static ULONG g_savedCiOptions = 0;
+static PULONG g_pCiOptions    = NULL;
+
+static void DisableCi(void) {
+    g_pCiOptions = (PULONG)FindCiOptions();
+    if (g_pCiOptions) {
+        g_savedCiOptions = *g_pCiOptions;
+        *g_pCiOptions = 0;
+        DbgPrint("[nexus_drv] CI disabled (was 0x%X)\n", g_savedCiOptions);
+    } else {
+        DbgPrint("[nexus_drv] CI options pointer NOT FOUND — proceeding anyway\n");
+    }
+}
+
+static void RestoreCi(void) {
+    if (g_pCiOptions) {
+        *g_pCiOptions = g_savedCiOptions;
+        DbgPrint("[nexus_drv] CI restored to 0x%X\n", g_savedCiOptions);
+    }
+}
+
 // ---- Config (will be settable via IOCTL in a later iteration) -----------
 static const WCHAR* g_targetExe = L"cs2.exe";
 
@@ -88,11 +136,13 @@ NTSTATUS DriverEntry(_In_ PDRIVER_OBJECT DriverObject,
 
     DbgPrint("[nexus_drv] DriverEntry — registering callbacks\n");
 
+    // Disable Code Integrity for our protected-API calls, then restore.
+    DisableCi();
     NTSTATUS s1 = PsSetCreateProcessNotifyRoutineEx(ProcessNotify, FALSE);
     DbgPrint("[nexus_drv] PsSetCreateProcessNotifyRoutineEx: 0x%08X\n", s1);
-
     NTSTATUS s2 = PsSetLoadImageNotifyRoutine(ImageLoadNotify);
     DbgPrint("[nexus_drv] PsSetLoadImageNotifyRoutine:       0x%08X\n", s2);
+    RestoreCi();
 
     if (!NT_SUCCESS(s1) || !NT_SUCCESS(s2)) {
         // Best-effort cleanup of whichever succeeded.
