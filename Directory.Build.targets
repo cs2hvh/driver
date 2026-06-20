@@ -1,13 +1,23 @@
 <Project>
-  <!-- The previous overrides aren't taking effect because the WDK driver
-       target pipeline adds ClCompile entries with SpectreMitigation set,
-       so our global SpectreMitigation=false doesn't reach them.
-
-       Solution: REPLACE the Spectre-check target with an empty stub. MSBuild
-       lets you override a target by simply defining one with the same name
-       in a later-imported project file. Directory.Build.targets imports last. -->
+  <!-- Override the Spectre lib check with a no-op so WDK driver targets
+       don't fail on missing 14.51/14.52 Spectre libs. -->
   <Target Name="_CheckForSpectreMitigationCompilationLibraries">
     <Message Importance="high"
              Text="[nexus] Spectre lib check bypassed (override target)" />
   </Target>
+
+  <!-- WDK include + library paths are not being added by the toolset on
+       VS 18, so add them explicitly. These are the standard locations for
+       Windows Kits 10. WindowsSdkDir and WindowsTargetPlatformVersion are
+       resolved from the registry by Microsoft.Cpp.props. -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\km;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\shared;$(WindowsSdkDir)Include\$(WindowsTargetPlatformVersion)\km\crt;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(WindowsSdkDir)Lib\$(WindowsTargetPlatformVersion)\km\x64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>ntoskrnl.lib;hal.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
 </Project>
+
